@@ -220,6 +220,8 @@ task snpolisher {
     input {
         File posterior_file
         File calls_file
+        File? special_snps_file
+        String species_type
     }
 
     meta {
@@ -232,8 +234,21 @@ task snpolisher {
     }
 
     command <<<
+        set -uexo pipefail
+        additional_args=""
+        if [! z  ~{special_snps_file}]
+        then
+        additional_args="--special-snps ~{special_snps_file}"
+        fi
+        ps-metrics --posterior-file ~{posterior_file} --call-file ~{calls_file} --metrics-file metrics.txt $additional_args
+        ps-classification --species-type ~{species_type} --metrics-file metrics.txt --output-dir .
 
     >>>
+
+    output {
+        File metrics_file = "metrics.txt"
+        File ps_performance_file = "Ps.performance.txt"
+    }
 
 
 }
