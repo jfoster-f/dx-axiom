@@ -149,7 +149,7 @@ task step2_genotype {
         Boolean rescue_genotyping = false
         String docker_image
     }
-    Float actual_cr_pass_threshold = select_first([cr_pass_threshold], 0.0)
+    Float actual_cr_pass_threshold = select_first([cr_pass_threshold, 0.0])
     meta {
         description: "Step2 Genotyping of Step1 passing cel_files with apt-genotype-axiom."
     }
@@ -163,7 +163,6 @@ task step2_genotype {
             description: "Zip archive of Axiom Library Files in root.",
             extension: ".zip"
         }
-        cr_fail_threshold: "Theshold below which a CEL file fails Call Rate."
         cr_pass_threshold: "Theshold above which a CEL file passes Call Rate."
         docker_image: "Docker image to use"
     }

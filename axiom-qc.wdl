@@ -44,8 +44,8 @@ workflow qc {
         cel_files = cel_files,
         cel_files_file = dqc.passing_cel_files_file,
         library_files_zip = library_files_zip,
-        qccr_fail_threshold = qccr_fail_threshold,
-        qccr_pass_threshold = qccr_pass_threshold,
+        cr_fail_threshold = qccr_fail_threshold,
+        cr_pass_threshold = qccr_pass_threshold,
         docker_image = docker_image
  }
 
