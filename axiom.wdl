@@ -38,13 +38,17 @@ task dqc {
     if [ -z ~{cel_files_file}]
     then
         echo "cel_files" > cel_files.txt
-        for cel_file in "${~{cel_files}[@]}"; do echo "$cel_file"; done > cel_files.txt
-        ~{cel_files_file}=cel_files.txt
+        for cel_file in "${~{cel_files[@]}}"; do echo "$cel_file"; done > cel_files.txt
+        cel_files_file=cel_files.txt
+    else
+        cel_files_file=~{cel_files_file}
     fi
     unzip ~{library_files_zip} -d library_files
     if [-z ~{xml_file}]
     then
-        ~{xml_file}e=$(find library_files -name *AxiomQC1*)
+        xml_file=$(find library_files -name *AxiomQC1*)
+    else
+        xml_file=~{xml_file}
     fi
     #need to check how referencing cel_files_file variable
     apt-geno-qc -analysis-files-path library_files -cel-files $cel_files_file -xml-file ~{xml_file} -out-file dqc_report.txt
