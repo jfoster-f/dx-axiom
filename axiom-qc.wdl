@@ -31,7 +31,7 @@ workflow qc {
     docker_image: "Docker image to use"
  }
 
- call axiom.dqc{
+ call axiom.Dqc{
     input:
        cel_files = cel_files,
        library_files_zip = library_files_zip,
@@ -39,10 +39,10 @@ workflow qc {
        docker_image = docker_image
  }
 
- call axiom.step1_genotype {
+ call axiom.Step1Genotype {
     input:
         cel_files = cel_files,
-        cel_files_file = dqc.passing_cel_files_file,
+        cel_files_file = Dqc.passing_cel_files_file,
         library_files_zip = library_files_zip,
         cr_fail_threshold = qccr_fail_threshold,
         cr_pass_threshold = qccr_pass_threshold,
@@ -50,11 +50,11 @@ workflow qc {
  }
 
  output {
-    File passing_cel_files_file = step1_genotype.passing_cel_files_file
-    File failing_cel_files_file = step1_genotype.failing_cel_files_file
-    File rescuable_cel_files_file = step1_genotype.rescuable_cel_files_file
-    File dqc_file = dqc.report_file
-    File report_file = step1_genotype.report_file
+    File passing_cel_files_file = Step1Genotype.passing_cel_files_file
+    File failing_cel_files_file = Step1Genotype.failing_cel_files_file
+    File rescuable_cel_files_file = Step1Genotype.rescuable_cel_files_file
+    File dqc_file = Dqc.report_file
+    File report_file = Step1Genotype.report_file
  }
 
 }

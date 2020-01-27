@@ -1,13 +1,14 @@
 version 1.0
 
-task dqc {
+task Dqc {
     input {
         Array[File] cel_files
         File? cel_files_file
         File library_files_zip
         String? xml_file
-        Float dqc_threshold
-        String docker_image
+        Float dqc_threshold = 0.82
+        String docker_image = "apt/2.11.0:latest"
+        String? output_prefix
     }
 
     meta {
@@ -31,11 +32,12 @@ task dqc {
         }
         dqc_threshold: "Theshold below which a CEL file fails DQC."
         docker_image: "Docker image to use"
+        output_prefix: "Prefix appended to all file outputs"
     }
 
     command <<<
     set -uexo pipefail
-    if [ -z ~{cel_files_file}]
+    if [ -z ~{cel_files_file} ]
     then
         echo "cel_files" > cel_files.txt
         echo '~{sep="\n" cel_files}' >> cel_files.txt
@@ -44,14 +46,14 @@ task dqc {
         cel_files_file=~{cel_files_file}
     fi
     unzip ~{library_files_zip} -d library_files
-    if [-z ~{xml_file}]
+    if [ -z ~{xml_file}]
     then
         xml_file=$(find library_files -name *AxiomQC1*)
     else
         xml_file=~{xml_file}
     fi
     #need to check how referencing cel_files_file variable
-    apt-geno-qc -analysis-files-path library_files -cel-files $cel_files_file -xml-file ~{xml_file} -out-file dqc_report.txt
+    apt-geno-qc -analysis-files-path library_files -cel-files $cel_files_file -xml-file $xml_file -out-file dqc_report.txt
     grep -v ^# dqc.txt | awk '{print $1 "\t" $18}' > dqc_simple.txt
     cat dqc_simple.txt | awk '$2 >= ~{dqc_threshold} {print $1}' > dqc_passing_cel_files.txt
     cat dqc_simple.txt | awk '$2 < ~{dqc_threshold} {print $1}' > dqc_failing_cel_files.txt
@@ -72,15 +74,16 @@ task dqc {
     }
 }
 
-task step1_genotype {
+task Step1Genotype {
     input{
         Array[File] cel_files
         File? cel_files_file
         File library_files_zip
         String? xml_file
         Float? cr_fail_threshold
-        Float cr_pass_threshold
-        String docker_image
+        Float cr_pass_threshold = 97.0
+        String docker_image = "apt/2.11.0:latest"
+        String? output_prefix
     }
 
     Float actual_cr_fail_threshold = select_first([cr_fail_threshold, cr_pass_threshold])
@@ -101,6 +104,8 @@ task step1_genotype {
         cr_fail_threshold: "Theshold below which a CEL file fails Call Rate."
         cr_pass_threshold: "Theshold above which a CEL file passes Call Rate."
         docker_image: "Docker image to use"
+        output_prefix: "Prefix appended to all file outputs"
+
     }
 
     command <<<
@@ -108,8 +113,10 @@ task step1_genotype {
         if [ -z ~{cel_files_file}]
         then
             echo "cel_files" > cel_files.txt
-            for cel_file in "${~{cel_files}[@]}"; do echo "$cel_file"; done > cel_files.txt
-            ~{cel_files_file}=cel_files.txt
+            echo '~{sep="\n" cel_files}' >> cel_files.txt
+            cel_files_file=cel_files.txt
+        else
+            cel_files_file = ~{cel_files_file}
         fi
         if [-z ~{cr_fail_threshold}]
         then
@@ -118,9 +125,12 @@ task step1_genotype {
         unzip ~{library_files_zip} -d library_files
         if [-z ~{xml_file}]
         then
-            ~{xml_file}=$(find library_files -name *Step1*)
+            xml_file=$(find library_files -name *Step1*)
+        else
+            xml_file=~{xml_file}
         fi
-        apt-genotype-axiom --analysis-files-path library_files --arg-file ~{xml_file} cel-files ~{cel_files_file} log-file apt-genotype-axiom.log
+
+        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file cel-files $cel_files_file log-file apt-genotype-axiom.log
         grep -v ^# AxiomGT1.report.txt | awk '{print $1 $4}' > step1_simple.txt
         cat step1_simple.txt | awk '$2 >= ~{cr_pass_threshold} {print $1}' > passing_cel_files.txt
         cat step1_simple.txt | awk '$2 < ~{actual_cr_fail_threshold} {print $1}' > failing_cel_files.txt
@@ -142,7 +152,7 @@ task step1_genotype {
     }
 }
 
-task step2_genotype {
+task Step2Genotype {
     input{
         Array[File] cel_files
         File? cel_files_file
@@ -151,7 +161,8 @@ task step2_genotype {
         String? xml_file
         Float? cr_pass_threshold
         Boolean rescue_genotyping = false
-        String docker_image
+        String docker_image = "apt/2.11.0:latest"
+        String? output_prefix
     }
     Float actual_cr_pass_threshold = select_first([cr_pass_threshold, 0.0])
     meta {
@@ -169,6 +180,8 @@ task step2_genotype {
         }
         cr_pass_threshold: "Theshold above which a CEL file passes Call Rate."
         docker_image: "Docker image to use"
+        output_prefix: "Prefix appended to all file outputs"
+
     }
 
     command <<<
@@ -176,13 +189,17 @@ task step2_genotype {
         if [ -z ~{cel_files_file}]
         then
             echo "cel_files" > cel_files.txt
-            for cel_file in "${~{cel_files}[@]}"; do echo "$cel_file"; done > cel_files.txt
-            ~{cel_files_file}=cel_files.txt
+            echo '~{sep="\n" cel_files}' >> cel_files.txt
+            cel_files_file=cel_files.txt
+        else
+            cel_files_file = ~{cel_files_file}
         fi
         unzip ~{library_files_zip} -d library_files
         if [-z ~{xml_file}]
         then
-            ~{xml_file}=$(find library_files -name *Step2*)
+            xml_file=$(find library_files -name *Step2*)
+        else
+            xml_file = ~{xml_file}
         fi
         additional_args=""
         if [~{rescue_genotyping}]
@@ -195,7 +212,7 @@ task step2_genotype {
         then
             additional_args="${additional_args} --snp-priors-input-file ~{priors} "
         fi
-        apt-genotype-axiom --analysis-files-path library_files --arg-file ~{xml_file} cel-files ~{cel_files_file} log-file apt-genotype-axiom.log $additional_args
+        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file cel-files $cel_files_file log-file apt-genotype-axiom.log $additional_args
         grep -v ^# AxiomGT1.report.txt | awk '{print $1 $4}' > report_simple.txt
         cat report_simple.txt | awk '$2 >= ~{actual_cr_pass_threshold} {print $1}' > passing_cel_files.txt
 
@@ -219,6 +236,8 @@ task step2_genotype {
 
 
 }
+
+
 task snpolisher {
     input {
         File posterior_file
