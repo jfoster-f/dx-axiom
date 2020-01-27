@@ -38,7 +38,7 @@ task dqc {
     if [ -z ~{cel_files_file}]
     then
         echo "cel_files" > cel_files.txt
-        for cel_file in "${~{cel_files[@]}}"; do echo "$cel_file"; done > cel_files.txt
+        echo '~{sep="\n" cel_files}' >> cel_files.txt
         cel_files_file=cel_files.txt
     else
         cel_files_file=~{cel_files_file}
