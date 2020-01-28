@@ -52,12 +52,10 @@ task Dqc {
     else
         xml_file=~{xml_file}
     fi
-    #need to check how referencing cel_files_file variable
     apt-geno-qc -analysis-files-path library_files -cel-files $cel_files_file -xml-file $xml_file -out-file dqc_report.txt
-    grep -v ^# dqc.txt | awk '{print $1 "\t" $18}' > dqc_simple.txt
-    cat dqc_simple.txt | awk '$2 >= ~{dqc_threshold} {print $1}' > dqc_passing_cel_files.txt
-    cat dqc_simple.txt | awk '$2 < ~{dqc_threshold} {print $1}' > dqc_failing_cel_files.txt
-
+    grep -v ^# dqc_report.txt | awk '{print $1 "\t" $18}' > dqc_simple.txt
+    cat dqc_simple.txt | awk '$2 >= ~{dqc_threshold} {print $1}' > passing_cel_files.txt
+    cat dqc_simple.txt | awk '$2 < ~{dqc_threshold} {print $1}' > failing_cel_files.txt
     >>>
 
     runtime {
@@ -110,27 +108,27 @@ task Step1Genotype {
 
     command <<<
         set -uexo pipefail
-        if [ -z ~{cel_files_file}]
+        if [ -z ~{cel_files_file} ]
         then
             echo "cel_files" > cel_files.txt
             echo '~{sep="\n" cel_files}' >> cel_files.txt
             cel_files_file=cel_files.txt
         else
-            cel_files_file = ~{cel_files_file}
+            cel_files_file=~{cel_files_file}
         fi
-        if [-z ~{cr_fail_threshold}]
+        if [ -z ~{cr_fail_threshold} ]
         then
             cr_fail_threshold=~{cr_pass_threshold}
         fi
         unzip ~{library_files_zip} -d library_files
-        if [-z ~{xml_file}]
+        if [ -z ~{xml_file} ]
         then
             xml_file=$(find library_files -name *Step1*)
         else
             xml_file=~{xml_file}
         fi
 
-        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file cel-files $cel_files_file log-file apt-genotype-axiom.log
+        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file --cel-files $cel_files_file --dual-channel-normalization true --log-file apt-genotype-axiom.log
         grep -v ^# AxiomGT1.report.txt | awk '{print $1 $4}' > step1_simple.txt
         cat step1_simple.txt | awk '$2 >= ~{cr_pass_threshold} {print $1}' > passing_cel_files.txt
         cat step1_simple.txt | awk '$2 < ~{actual_cr_fail_threshold} {print $1}' > failing_cel_files.txt
@@ -186,7 +184,7 @@ task Step2Genotype {
 
     command <<<
         set -uexo pipefail
-        if [ -z ~{cel_files_file}]
+        if [ -z ~{cel_files_file} ]
         then
             echo "cel_files" > cel_files.txt
             echo '~{sep="\n" cel_files}' >> cel_files.txt
@@ -195,24 +193,24 @@ task Step2Genotype {
             cel_files_file = ~{cel_files_file}
         fi
         unzip ~{library_files_zip} -d library_files
-        if [-z ~{xml_file}]
+        if [ -z ~{xml_file} ]
         then
             xml_file=$(find library_files -name *Step2*)
         else
             xml_file = ~{xml_file}
         fi
         additional_args=""
-        if [~{rescue_genotyping}]
+        if [ ~{rescue_genotyping} ]
         then
             additional_args="--brlmmp-CM 0"
         else
             additional_args="--brlmmp-CM 1"
         fi
-        if [! -z ~{priors}]
+        if [ ! -z ~{priors} ]
         then
             additional_args="${additional_args} --snp-priors-input-file ~{priors} "
         fi
-        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file cel-files $cel_files_file log-file apt-genotype-axiom.log $additional_args
+        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file --cel-files $cel_files_file --log-file apt-genotype-axiom.log --dual-channel-normalization true $additional_args
         grep -v ^# AxiomGT1.report.txt | awk '{print $1 $4}' > report_simple.txt
         cat report_simple.txt | awk '$2 >= ~{actual_cr_pass_threshold} {print $1}' > passing_cel_files.txt
 
@@ -262,7 +260,7 @@ task snpolisher {
         then
         additional_args="--special-snps ~{special_snps_file}"
         fi
-        ps-metrics --posterior-file ~{posterior_file} --call-file ~{calls_file} --metrics-file metrics.txt $additional_args
+        ps-metrics --posterior-file ~{posterior_file} --call-file ~{calls_file} --metrics-file metrics.txt --dual-channel-normalization true $additional_args
         ps-classification --species-type ~{species_type} --metrics-file metrics.txt --output-dir .
 
     >>>

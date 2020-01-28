@@ -14,6 +14,8 @@ RUN apt update \
  && cd /tmp/apps \
  && mkdir apt \
  && unzip apt.zip -d apt \
- && mv apt /usr/local/bin \
+ && chmod +x apt/apt_${APT_VERSION}_linux_64_bitx86_binaries/bin/* \
+ && mv apt/apt_${APT_VERSION}_linux_64_bitx86_binaries/bin/* /usr/local/bin \
  && cd / \
- && rm -Rf /tmp/apps
+ && rm -Rf /tmp/appsdoc
+
