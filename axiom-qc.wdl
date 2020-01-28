@@ -2,7 +2,7 @@ version 1.0
 
 import "axiom.wdl" as axiom
 
-workflow qc {
+workflow Qc {
  input {
     Array[File] cel_files
     File library_files_zip

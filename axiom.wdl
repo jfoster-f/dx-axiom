@@ -190,14 +190,14 @@ task Step2Genotype {
             echo '~{sep="\n" cel_files}' >> cel_files.txt
             cel_files_file=cel_files.txt
         else
-            cel_files_file = ~{cel_files_file}
+            cel_files_file=~{cel_files_file}
         fi
         unzip ~{library_files_zip} -d library_files
         if [ -z ~{xml_file} ]
         then
             xml_file=$(find library_files -name *Step2*)
         else
-            xml_file = ~{xml_file}
+            xml_file=~{xml_file}
         fi
         additional_args=""
         if [ ~{rescue_genotyping} ]
@@ -236,11 +236,14 @@ task Step2Genotype {
 }
 
 
-task snpolisher {
+task SNPolisher {
     input {
         File posterior_file
         File calls_file
-        File? special_snps_file
+        File report_file
+        File summary_file
+        File library_files_zip
+        File? ps_list_file
         String species_type
     }
 
@@ -255,13 +258,21 @@ task snpolisher {
 
     command <<<
         set -uexo pipefail
+        unzip ~{library_files_zip} -d library_files
         additional_args=""
-        if [! z  ~{special_snps_file}]
+        special_snps_file=$(find library_files -name *.specialSNPs)
+        if [  ! -z special_snps_file ]
         then
-        additional_args="--special-snps ~{special_snps_file}"
+            additional_args="${additional_args} --special_snps $special_snps_file "
         fi
-        ps-metrics --posterior-file ~{posterior_file} --call-file ~{calls_file} --metrics-file metrics.txt --dual-channel-normalization true $additional_args
-        ps-classification --species-type ~{species_type} --metrics-file metrics.txt --output-dir .
+        if [ ! -z ps_list_file ]
+        then
+            additional_args="${additional_args} --pid-file ~{ps_list_file} "
+        fi
+        ps2snp_file=$(find library_files -name *.ps2snp_map.ps)
+
+        ps-metrics --posterior-file ~{posterior_file} --call-file ~{calls_file} --report-file ~{report_file} --summary_file ~{summary_file} --metrics-file metrics.txt $additional_args
+        ps-classification --species-type ~{species_type} --metrics-file metrics.txt --ps2snp-file $ps2snp_file --output-dir .
 
     >>>
 
