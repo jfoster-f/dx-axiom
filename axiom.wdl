@@ -44,6 +44,9 @@ task Dqc {
         cel_files_file=cel_files.txt
     else
         cel_files_file=~{cel_files_file}
+        for x in ~{sep=" " cel_files} ; do
+            ln -s $x .
+        done
     fi
     unzip ~{library_files_zip} -d library_files
     if [ -z ~{xml_file}]
@@ -115,6 +118,9 @@ task Step1Genotype {
             cel_files_file=cel_files.txt
         else
             cel_files_file=~{cel_files_file}
+            for x in ~{sep=" " cel_files} ; do
+                ln -s $x .
+            done
         fi
         if [ -z ~{cr_fail_threshold} ]
         then
@@ -129,7 +135,7 @@ task Step1Genotype {
         fi
 
         apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file --cel-files $cel_files_file --dual-channel-normalization true --log-file apt-genotype-axiom.log
-        grep -v ^# AxiomGT1.report.txt | awk '{print $1 $4}' > step1_simple.txt
+        grep -v ^# AxiomGT1.report.txt | awk '{print $1 "\t" $4}' > step1_simple.txt
         cat step1_simple.txt | awk '$2 >= ~{cr_pass_threshold} {print $1}' > passing_cel_files.txt
         cat step1_simple.txt | awk '$2 < ~{actual_cr_fail_threshold} {print $1}' > failing_cel_files.txt
         cat step1_simple.txt | awk '($2 < ~{cr_pass_threshold} && $2 >= ~{actual_cr_fail_threshold}){print $1}' > rescuable_cel_files.txt
@@ -191,6 +197,9 @@ task Step2Genotype {
             cel_files_file=cel_files.txt
         else
             cel_files_file=~{cel_files_file}
+            for x in ~{sep=" " cel_files} ; do
+                ln -s $x .
+            done
         fi
         unzip ~{library_files_zip} -d library_files
         if [ -z ~{xml_file} ]
@@ -202,7 +211,7 @@ task Step2Genotype {
         additional_args=""
         if [ ~{rescue_genotyping} ]
         then
-            additional_args="--brlmmp-CM 0"
+            additional_args="--brlmmp-CM 2"
         else
             additional_args="--brlmmp-CM 1"
         fi
@@ -210,7 +219,7 @@ task Step2Genotype {
         then
             additional_args="${additional_args} --snp-priors-input-file ~{priors} "
         fi
-        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file --cel-files $cel_files_file --log-file apt-genotype-axiom.log --dual-channel-normalization true $additional_args
+        apt-genotype-axiom --analysis-files-path library_files --arg-file $xml_file --cel-files $cel_files_file --log-file apt-genotype-axiom.log --dual-channel-normalization true --allele-summaries true --snp-posteriors-output true $additional_args
         grep -v ^# AxiomGT1.report.txt | awk '{print $1 $4}' > report_simple.txt
         cat report_simple.txt | awk '$2 >= ~{actual_cr_pass_threshold} {print $1}' > passing_cel_files.txt
 
@@ -261,16 +270,16 @@ task SNPolisher {
         unzip ~{library_files_zip} -d library_files
         additional_args=""
         special_snps_file=$(find library_files -name *.specialSNPs)
-        if [  ! -z special_snps_file ]
+        if [  ! -z $special_snps_file ]
         then
             additional_args="${additional_args} --special_snps $special_snps_file "
         fi
-        if [ ! -z ps_list_file ]
+        if [ ! -z ~{ps_list_file} ]
         then
             additional_args="${additional_args} --pid-file ~{ps_list_file} "
         fi
         ps2snp_file=$(find library_files -name *.ps2snp_map.ps)
-
+        echo $(ls /usr/local/bin)
         ps-metrics --posterior-file ~{posterior_file} --call-file ~{calls_file} --report-file ~{report_file} --summary_file ~{summary_file} --metrics-file metrics.txt $additional_args
         ps-classification --species-type ~{species_type} --metrics-file metrics.txt --ps2snp-file $ps2snp_file --output-dir .
 

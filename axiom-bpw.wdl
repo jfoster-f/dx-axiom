@@ -59,14 +59,20 @@ workflow Bpw {
         docker_image = docker_image
  }
 
- call axiom.Step2Genotype as rescue{
-    input:
-        cel_files = cel_files,
-        cel_files_file = Step1Genotype.rescuable_cel_files_file,
-        library_files_zip = library_files_zip,
-        priors = genotype.posteriors_file,
-        rescue_genotyping = true,
-        docker_image = docker_image
+ Boolean run_rescue = false
+ if(length(read_lines(Step1Genotype.rescuable_cel_files_file)) > 0) {
+    run_rescue = true,
+ }
+ if(run_rescue) {
+    call axiom.Step2Genotype as rescue{
+        input:
+            cel_files = cel_files,
+            cel_files_file = Step1Genotype.rescuable_cel_files_file,
+            library_files_zip = library_files_zip,
+            priors = genotype.posteriors_file,
+            rescue_genotyping = true,
+            docker_image = docker_image
+    }
  }
 
  call axiom.SNPolisher {
