@@ -2,19 +2,25 @@ version 1.0
 
 import "axiom.wdl" as axiom
 
-workflow BPW {
+workflow LivingDNA {
  input {
     Array[File] cel_files
     File library_files_zip
+    File annotation_file
+    File script_file
+    File template_file
+    File css_file
     Float dqc_threshold = 0.82
     Float qccr_fail_threshold = 97.0
     Float qccr_pass_threshold = 97.0
     String? priors_filename
-    String docker_image = "apt/2.11.0:latest"
+    String? batch_name
+    String apt_docker_image = "apt/2.11.0:latest"
+    String report_docker_image = "dxaxiom/1.0.0:latest"
  }
 
  meta {
-    description: "Perform Axiom QC as per the Best Practices Workflow: DQC -> Step1 Genotyping -> Step2 Genotyping -> SNPolisher"
+    description: "Implement the Axiom Best Practices in the LivingDNA context"
  }
 
  parameter_meta {
@@ -30,7 +36,8 @@ workflow BPW {
     qccr_fail_threshold: "Theshold below which a CEL file fails QC Call Rate."
     qccr_pass_threshold: "Theshold above which a CEL file passes QC Call Rate."
 
-    docker_image: "Docker image to use"
+    apt_docker_image: "Docker image to use"
+    report_docker_image: "Docker image to use"
  }
 
  call axiom.Dqc{
@@ -38,7 +45,7 @@ workflow BPW {
        cel_files = cel_files,
        library_files_zip = library_files_zip,
        dqc_threshold = dqc_threshold,
-       docker_image = docker_image
+       docker_image = apt_docker_image
  }
 
  call axiom.Step1Genotype {
@@ -48,7 +55,7 @@ workflow BPW {
         library_files_zip = library_files_zip,
         cr_fail_threshold = qccr_fail_threshold,
         cr_pass_threshold = qccr_pass_threshold,
-        docker_image = docker_image
+        docker_image = apt_docker_image
  }
 
  call axiom.Step2Genotype as genotype{
@@ -57,7 +64,20 @@ workflow BPW {
         cel_files_file = Step1Genotype.passing_cel_files_file,
         library_files_zip = library_files_zip,
         rescue_genotyping = false,
-        docker_image = docker_image
+        docker_image = apt_docker_image
+ }
+
+
+ if(length(read_lines(Step1Genotype.rescuable_cel_files_file)) > 1) {
+    call axiom.Step2Genotype as rescue{
+        input:
+            cel_files = cel_files,
+            cel_files_file = Step1Genotype.rescuable_cel_files_file,
+            library_files_zip = library_files_zip,
+            priors_file = genotype.posteriors_file,
+            rescue_genotyping = true,
+            docker_image = apt_docker_image
+    }
  }
 
  call axiom.SNPolisher {
@@ -67,12 +87,46 @@ workflow BPW {
         report_file = genotype.report_file,
         summary_file = genotype.summary_file,
         library_files_zip = library_files_zip,
-        species_type = "human"
+        species_type = "human",
+        docker_image = apt_docker_image
  }
 
+ call axiom.FormatResultVCF as vcf_pass {
+    input:
+        calls_file = genotype.calls_file,
+        annotation_file = annotation_file,
+        performance_file = SNPolisher.performance_file,
+        docker_image = apt_docker_image
+
+ }
+
+ if(length(read_lines(Step1Genotype.rescuable_cel_files_file)) > 1) {
+ call axiom.FormatResultVCF as vcf_rescue {
+    input:
+        calls_file = select_first([rescue.calls_file]),
+        annotation_file = annotation_file,
+        performance_file = SNPolisher.performance_file,
+        docker_image = apt_docker_image
+
+ }
+ }
+
+ call axiom.BatchReport {
+    input:
+        geno_qc_results_file = Dqc.report_file,
+        step1_report_file = Step1Genotype.report_file,
+        genotyping_report_file = genotype.report_file,
+        performance_file = SNPolisher.performance_file,
+        script_file = script_file,
+        template_file = template_file,
+        css_file = css_file,
+        batch_name = batch_name,
+        docker_image = report_docker_image
+
+ }
 
  output {
-    File dqc_file = Dqc.report_file
+    File geno_qc_results_file = Dqc.report_file
     File dqc_passing_cel_files_file = Dqc.passing_cel_files_file
     File dqc_failing_cel_files_file = Dqc.failing_cel_files_file
     File step1_passing_cel_files_file = Step1Genotype.passing_cel_files_file
@@ -85,14 +139,17 @@ workflow BPW {
     File genotyping_summary_file = genotype.summary_file
     File genotyping_confidences_file = genotype.confidences_file
     File genotyping_passing_cel_files_file = genotype.passing_cel_files_file
-    File rescue_report_file = genotype.report_file
-    File rescue_calls_file = genotype.calls_file
-    File rescue_posteriors_file = genotype.posteriors_file
-    File rescue_summary_file = genotype.summary_file
-    File rescue_confidences_file = genotype.confidences_file
-    File rescue_passing_cel_files_file = genotype.passing_cel_files_file
+    File? rescue_report_file = rescue.report_file
+    File? rescue_calls_file = rescue.calls_file
+    File? rescue_posteriors_file = rescue.posteriors_file
+    File? rescue_summary_file = rescue.summary_file
+    File? rescue_confidences_file = rescue.confidences_file
+    File? rescue_passing_cel_files_file = genotype.passing_cel_files_file
     File metrics_file = SNPolisher.metrics_file
     File performance_file = SNPolisher.performance_file
+    File vcf_pass_file = vcf_pass.vcf_file
+    File? vcf_rescue_file = vcf_rescue.vcf_file
+    File batch_report_file = BatchReport.batch_report_file
  }
 
 }

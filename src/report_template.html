@@ -1,0 +1,119 @@
+<head>
+    <link rel="stylesheet" href={{ css_file }}>
+</head>
+<body>
+    <h1>Batch Report: {{ batch_name }}</h1>
+    <h2>Analysis Summary</h2>
+        <table id="report">
+            <tr>
+                <th></th>
+                <th>Number</th>
+            </tr>
+            <tr>
+                <td>Plates</td>
+                <td>{{ number_of_plates }}</td>
+            </tr>
+            <tr>
+                <td>Number of Input Samples</td>
+                <td>{{ number_of_samples }}</td>
+            </tr>
+            <tr>
+                <td>Samples passing DQC</td>
+                <td>{{ number_dqc_passing }}</td>
+            </tr>
+            <tr>
+                <td>Samples passing DQC and QC CR</td>
+                <td>{{ number_dqc_qccr_passing }}</td>
+            </tr>
+             <tr>
+                <td>Average /QC CR for the passing samples</td>
+                <td>{{ mean_qccr_passing }}</td>
+            </tr>
+        </table>
+        {{ error }}
+    <h2>Marker Metrics Summary</h2>
+        <table>
+            <tr>
+                <th>Conversion Type</th>
+                <th>Count</th>
+                <th>Percentage</th>
+            </tr>
+            <tr>
+                <td>PolyHighResolution</td>
+                <td>{{ phr_count }}</td>
+                <td>{{ phr_percentage }}</td>
+            </tr>
+            <tr>
+                <td>NoMinorHom</td>
+                <td>{{ nmh_count }}</td>
+                <td>{{ nmh_percentage }}</td>
+            </tr>
+            <tr>
+                <td>MonoHighResolution</td>
+                <td>{{ mhr_count }}</td>
+                <td>{{ mhr_percentage }}</td>
+            </tr>
+            <tr>
+                <td>CallRateBelowThreshold</td>
+                <td>{{ crbt_count }}</td>
+                <td>{{ crbt_percentage }}</td>
+            </tr>
+            <tr>
+                <td>OTV</td>
+                <td>{{ otv_count }}</td>
+                <td>{{ otv_percentage }}</td>
+            </tr>
+            <tr>
+                <td>Other</td>
+                <td>{{ other_count }}</td>
+                <td>{{ other_percentage }}</td>
+            </tr>
+        </table>
+        <p>
+            Total Number of Markers: {{ number_markers}}<br>
+            Number of Best and Recommended: {{ number_best_and_recommended }}<br>
+            Total Number of ProbeSets: {{ number_probesets }}
+        </p>
+    <h2>Plate QC Summary</h2>
+        <table>
+            <tr>
+                <th>Plate Barcode</th>
+                <th>Result</th>
+                <th>Samples per plate</th>
+                <th>Samples failing DQC</th>
+                <th>Samples failing QC CR</th>
+                <th>Samples passing</th>
+                <th>Percent passing</th>
+                <th>Average CR for passing samples</th>
+            </tr>
+
+        </table>
+    <h2>Plate QC Plots</h2>
+    <h2>Sample Table</h2>
+        <table>
+            <tr>
+                <th>Sample Filename</th>
+                {% for column in sample_table_df.columns %}
+                <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+            {% for idx, row in sample_table_df.iterrows() %}
+            <tr>
+                <td>{{ idx }}</td>
+                {% for colname in sample_table_df.columns %}
+                <td>{{ row[colname] }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+    <h2>Sample QC Plots</h2>
+    <table>
+        <tr>
+            <td><img src="dqc_qccr.png"></td>
+            <td><img src="qccr_hetrate.png"></td>
+        </tr>
+    </table>
+
+
+
+</body>

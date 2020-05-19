@@ -2,7 +2,7 @@ version 1.0
 
 import "axiom.wdl" as axiom
 
-workflow BPW {
+workflow LivingDNA {
  input {
     Array[File] cel_files
     File library_files_zip
@@ -14,7 +14,7 @@ workflow BPW {
  }
 
  meta {
-    description: "Perform Axiom QC as per the Best Practices Workflow: DQC -> Step1 Genotyping -> Step2 Genotyping -> SNPolisher"
+    description: "Perform Axiom QC as per the Best Practices Workflow: DQC -> Step1 Genotyping"
  }
 
  parameter_meta {
@@ -29,7 +29,6 @@ workflow BPW {
     dqc_threshold: "Theshold below which a CEL file fails DQC."
     qccr_fail_threshold: "Theshold below which a CEL file fails QC Call Rate."
     qccr_pass_threshold: "Theshold above which a CEL file passes QC Call Rate."
-
     docker_image: "Docker image to use"
  }
 
@@ -58,6 +57,19 @@ workflow BPW {
         library_files_zip = library_files_zip,
         rescue_genotyping = false,
         docker_image = docker_image
+ }
+
+
+ if(length(read_lines(Step1Genotype.rescuable_cel_files_file)) > 1) {
+    call axiom.Step2Genotype as rescue{
+        input:
+            cel_files = cel_files,
+            cel_files_file = Step1Genotype.rescuable_cel_files_file,
+            library_files_zip = library_files_zip,
+            priors = genotype.posteriors_file,
+            rescue_genotyping = true,
+            docker_image = docker_image
+    }
  }
 
  call axiom.SNPolisher {
@@ -92,7 +104,7 @@ workflow BPW {
     File rescue_confidences_file = genotype.confidences_file
     File rescue_passing_cel_files_file = genotype.passing_cel_files_file
     File metrics_file = SNPolisher.metrics_file
-    File performance_file = SNPolisher.performance_file
+    File ps_performance_file = SNPolisher.ps_performance_file
  }
 
 }

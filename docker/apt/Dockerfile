@@ -10,7 +10,7 @@ ARG APT_VERSION
 ADD https://downloads.thermofisher.com/APT/APT${APT_VERSION}/apt_${APT_VERSION}_linux_64_bit_x86_binaries.zip /tmp/apps/apt.zip
 
 RUN apt update \
- && apt -y install unzip \
+ && apt -y install zip unzip \
  && cd /tmp/apps \
  && mkdir apt \
  && unzip apt.zip -d apt \
