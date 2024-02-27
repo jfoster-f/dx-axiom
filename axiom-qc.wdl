@@ -10,8 +10,6 @@ workflow Qc {
         Int max_threads = 0
     }
 
-    String docker_image = "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
-
     meta {
         description: "Perform Axiom QC as per the Best Practices Workflow: DQC -> Step1 Genotyping"
     }
@@ -28,7 +26,6 @@ workflow Qc {
         dqc_threshold: "Theshold below which a CEL file fails DQC."
         qccr_fail_threshold: "Theshold below which a CEL file fails QC Call Rate."
         qccr_pass_threshold: "Theshold above which a CEL file passes QC Call Rate."
-        docker_image: "Docker image to use"
     }
 
     call axiom.geno_qc_axiom {
@@ -37,19 +34,20 @@ workflow Qc {
             library_files_zip = library_files_zip,
             arg_file = "Axiom_PMRA.r3.apt-geno-qc.AxiomQC1.xml",
             dqc_threshold = dqc_threshold,
-            docker_image = docker_image,
             max_threads = max_threads
     }
 
-    call axiom.genotype {
+    call axiom.step1_genotype {
         input:
             cel_files = geno_qc_axiom.passing_cel_files,
             library_files_zip = library_files_zip,
             arg_file = "Axiom_PMRA_96orMore_Step1.r3.apt-genotype-axiom.AxiomGT1.apt2.xml",
-            docker_image = docker_image,
     }
 
     output {
-        File dqc_file = geno_qc_axiom.report_file
+        File geno_qc_report_file = geno_qc_axiom.report_file
+        File genotype_report_file = step1_genotype.genotype_report_file
+        File passing_cel_files = step1_genotype.passing_cel_files_file
+        File batch_folder_zip = step1_genotype.batch_folder_zip
     }
 }

@@ -37,7 +37,6 @@ task geno_qc_axiom {
         Float igender_female_threshold = 0.48
         Float igender_male_threshold = 0.7
         Float dqc_threshold = 0.82
-        String docker_image = "dnanexus/apt:2.11.8"
     }
 
     meta {
@@ -86,7 +85,6 @@ task geno_qc_axiom {
         igender_female_threshold: "The female threshold to use in the raw intensity gender call. default value: '0.480000'"
         igender_male_threshold: "The male threshold to use in the raw intensity gender call. default value: '0.700000'"
         dqc_threshold: "Theshold below which a CEL file fails DQC."
-        docker_image: "Docker image to use"
     }
 
     command <<<
@@ -183,7 +181,7 @@ task geno_qc_axiom {
     >>>
 
     runtime {
-        docker: docker_image
+        docker: "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
         dx_instance_type: "mem1_ssd1_v2_x4"
     }
 
@@ -196,7 +194,7 @@ task geno_qc_axiom {
     }
 }
 
-task genotype {
+task step1_genotype {
     input {
         Array[File] cel_files
         File? cel_files_file
@@ -384,12 +382,9 @@ task genotype {
         File? multi_priors_input_file
         Boolean multi_posteriors_output = false
         String? multi_posteriors_output_file
-        Float? cr_fail_threshold
-        Float? cr_pass_threshold
-        String docker_image = "dnanexus/apt:2.11.8"
+        Float cr_fail_threshold = 0.97
+        Float cr_pass_threshold = 0.97
     }
-
-    Float actual_cr_fail_threshold = select_first([cr_fail_threshold, cr_pass_threshold])
 
     meta {
         description: "Step1 Genotyping of DQC passing cel_file with apt-genotype-axiom."
@@ -582,7 +577,6 @@ task genotype {
         multi_posteriors_output_file: "Full path of multi_allelic posteriors file."
         cr_fail_threshold: "Theshold below which a CEL file fails Call Rate."
         cr_pass_threshold: "Theshold above which a CEL file passes Call Rate."
-        docker_image: "Docker image to use"
     }
 
     command <<<
@@ -1215,44 +1209,38 @@ task genotype {
         apt-genotype-axiom $cmd_string
         grep -v ^# AxiomGT1.report.txt | awk '{print $1 "\t" $4}' > step1_simple.txt
 
-        cat step1_simple.txt | awk '$2 >= ~{cr_pass_threshold} {print $1}' > passing_cel_files.txt
-        cat step1_simple.txt | awk '$2 < ~{cr_fail_threshold} {print $1}' > failing_cel_files.txt
-        cat step1_simple.txt | awk '($2 < ~{cr_pass_threshold} && $2 >= ~{cr_fail_threshold}){print $1}' > rescuable_cel_files.txt
-        zip -r batch_folder.zip ~{batch_folder}/~{batch_folder_data_dir}/
-
         mkdir -p out/passing_cel_files
-        mkdir -p out/failing_cel_files
-        mkdir -p out/rescuable_cel_files
-
+        cat step1_simple.txt | awk '$2 >= ~{cr_pass_threshold} {print $1}' > passing_cel_files.txt
         for FILE in $(cat passing_cel_files.txt); do
-            CEL=$(find /home/dnanexus/inputs -name $FILE)
-            [[ -f $CEL ]] && mv $CEL out/passing_cel_files
+        CEL=$(find /home/dnanexus/inputs -name $FILE)
+        [[ -f $CEL ]] && mv $CEL out/passing_cel_files
         done
 
+        mkdir -p out/failing_cel_files
+        cat step1_simple.txt | awk '$2 < ~{cr_fail_threshold} {print $1}' > failing_cel_files.txt
         for FILE in $(cat failing_cel_files.txt); do
             CEL=$(find /home/dnanexus/inputs -name $FILE)
             [[ -f $CEL ]] && mv $CEL out/failing_cel_files
         done
 
+
+        mkdir -p out/rescuable_cel_files
+        cat step1_simple.txt | awk '($2 < ~{cr_pass_threshold} && $2 >= ~{cr_fail_threshold}){print $1}' > rescuable_cel_files.txt
         for FILE in $(cat rescuable_cel_files.txt); do
-            CEL=$(find /home/dnanexus/inputs -name $FILE)
-            [[ -f $CEL ]] && mv $CEL out/rescuable_cel_files
+        CEL=$(find /home/dnanexus/inputs -name $FILE)
+        [[ -f $CEL ]] && mv $CEL out/rescuable_cel_files
         done
+
+        zip -r batch_folder.zip ~{batch_folder}/~{batch_folder_data_dir}/
     >>>
 
     runtime {
-        docker: docker_image
-        cpu: "4"
-        memory: "2 GB"
-        disks: "local-disk 20 SSD"
+        docker: "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
+        dx_instance_type: "mem1_ssd1_v2_x8"
     }
 
     output {
-        File? genotype_report_file = "AxiomGT1.report.txt"
-        File? genotype_calls_file = "AxiomGT1.calls.txt"
-        File? genotype_posteriors_file = "AxiomGT1.snp-posteriors.txt"
-        File? genotype_summary_file = "AxiomGT1.summary.txt"
-        File? genotype_confidences_file = "AxiomGT1.confidences.txt"
+        File genotype_report_file = "AxiomGT1.report.txt"
         File passing_cel_files_file = "passing_cel_files.txt"
         File failing_cel_files_file = "failing_cel_files.txt"
         File rescuable_cel_files_file = "rescuable_cel_files.txt"
@@ -1371,7 +1359,6 @@ task ps_metrics {
         Int ces_k = 2
         Boolean use_eureka = false
 
-        String docker_image = "apt/2.11.0:latest"
     }
 
     meta {
@@ -1468,7 +1455,6 @@ task SNPolisher {
         File library_files_zip
         File? ps_list_file
         String species_type
-        String docker_image = "apt/2.11.0:latest"
 
     }
 
@@ -1502,7 +1488,6 @@ task SNPolisher {
                           extension: ".txt, .ps"
                       }
         species_type : "Ps_classification mode: one of 'human', 'polyploid' or 'diploid'"
-        docker_image: "Docker image to use"
     }
 
     command <<<
@@ -1525,7 +1510,7 @@ task SNPolisher {
     >>>
 
     runtime {
-        docker: docker_image
+        docker: "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
         cpu: "4"
         memory: "2 GB"
         disks: "local-disk 20 SSD"
@@ -1566,7 +1551,6 @@ task FormatResultVCF {
         String  call_format = "call_code"
         String? export_basecall_otv = "OTV"
         Boolean enable_divider = true
-        String docker_image = "apt/2.11.0:latest"
     }
 
     meta {
@@ -1618,7 +1602,6 @@ task FormatResultVCF {
         call_format: "Sets format of export calls. Available formats: 'call_code' {AA/AB/BB} or 'base_call' {CC/CT/TT} or 'translated' {0/1/2/-1}."
         export_basecall_otv: "Use in conjunction with '--export-call-format base_call' to make a distinction between NoCall and OTV when exporting using AxiomGT1.calls.txt. Both will be replaced with '---' per DIR specification if this parameter is not supplied. (ex: OTV)"
         enable_divider: "Enable divider '/' between alleles"
-        docker_image: "Docker image to use"
     }
 
     command <<<
@@ -1641,7 +1624,7 @@ task FormatResultVCF {
     >>>
 
     runtime {
-        docker: docker_image
+        docker: "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
         cpu: "4"
         memory: "2 GB"
         disks: "local-disk 20 SSD"
@@ -1667,7 +1650,6 @@ task Package {
         String? analysis_category
         File? multi_snp_posteriors_file
         String batch_name
-        String docker_image = "apt/2.11.0:latest"
     }
 
     meta {
@@ -1704,7 +1686,6 @@ task Package {
         analysis_category: "Choose analysis category for multiallele AxAS package. 'cn_gt' for PharmacoScan, 'cn_gt_2' for CarrierScan."
         multi_snp_posteriors_file: "Full path to AxiomGT1.snp-posteriors.multi.txt"
         batch_name: "Name of zipped project folder"
-        docker_image: "Docker image to use"
 
     }
 
@@ -1722,7 +1703,7 @@ task Package {
     >>>
 
     runtime {
-        docker: docker_image
+        docker: "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
         cpu: "4"
         memory: "2 GB"
         disks: "local-disk 20 SSD"
@@ -1743,7 +1724,6 @@ task BatchReport {
         File script_file
         File template_file
         File css_file
-        String docker_image = "dxaxiom/1.0.0:latest"
     }
 
     meta {
@@ -1780,7 +1760,6 @@ task BatchReport {
                       description: "CSS file used to style intermediate HTML and the PDF.",
                       extension: ".css"
                   }
-        docker_image: "Docker image to use."
     }
 
     String actual_batch_name = select_first([batch_name, '""'])
@@ -1791,7 +1770,7 @@ task BatchReport {
     >>>
 
     runtime {
-        docker: docker_image
+        docker: "dx://file-GgKGbVQ08vJZG4gXXfK6jzVb"
         cpu: "2"
         memory: "2 GB"
         disks: "local-disk 20 SSD"
