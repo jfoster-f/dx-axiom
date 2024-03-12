@@ -1,0 +1,23 @@
+library(SNPolisher)
+args = commandArgs(trailingOnly=TRUE)
+n = args[1]
+phr = sample(readLines(args[2]), n, replace = FALSE)
+writeLines(append("probeset_ids", phr), con = file("PolyHighResolution_sample.ps", "w"), sep = "\n", useBytes = FALSE)
+nmh = readLines(args[3]), n, replace = FALSE)
+writeLines(append("probeset_ids", nmh), con = file("NoMinorHom_sample.ps", "w"), sep = "\n", useBytes = FALSE)
+mhr = readLines(args[4]), n, replace = FALSE)
+writeLines(append("probeset_ids", mhr), con = file("MonoHighResolution_sample.ps", "w"), sep = "\n", useBytes = FALSE)
+crbt = readLines(args[5]), n, replace = FALSE)
+writeLines(append("probeset_ids", crbt), con = file("CallRateBelowThreshold_sample.ps", "w"), sep = "\n", useBytes = FALSE)
+otv = readLines(args[6]), n, replace = FALSE)
+writeLines(append("probeset_ids", otv), con = file("OffTargetVariant_sample.ps", "w"), sep = "\n", useBytes = FALSE)
+other = readLines(rgs[7]), n, replace = FALSE)
+writeLines(append("probeset_ids", other), con = file("Other_sample.ps", "w"), sep = "\n", useBytes = FALSE)
+
+
+Ps_Visualization(output.File="PolyHighResolution.pdf",pidFile="PolyHighResolution_sample.ps" ,callFile=args[8], summaryFile=args[9],posteriorFile=args[10], confidenceFile=args[11], specialSNPsFile=args[12] ,plot.genotype=TRUE,plot.intensity=FALSE,plot.confs=TRUE,vertical.line=TRUE)
+Ps_Visualization(output.File="NoMinorHom.pdf",pidFile="NoMinorHom_sample.ps" ,callFile=args[8], summaryFile=args[9],posteriorFile=args[10], confidenceFile= args[11], specialSNPsFile=args[12], plot.genotype=TRUE,plot.intensity=FALSE,plot.confs=TRUE,vertical.line=TRUE)
+Ps_Visualization(output.File="MonoHighResolution.pdf",pidFile="MonoHighResolution_sample.ps" ,callFile=args[8], summaryFile=args[9],posteriorFile=args[10], confidenceFile= args[11], specialSNPsFile=args[12], plot.genotype=TRUE,plot.intensity=FALSE,plot.confs=TRUE,vertical.line=TRUE)
+Ps_Visualization(output.File="CallRateBelowThreshold.pdf",pidFile="CallRateBelowThreshold_sample.ps" ,callFile=args[8], summaryFile=args[9],posteriorFile=args[10], confidenceFile= args[11], specialSNPsFile=args[12], plot.genotype=TRUE,plot.intensity=FALSE,plot.confs=TRUE,vertical.line=TRUE)
+Ps_Visualization(output.File="OffTargetVariant.pdf",pidFile="OffTargetVariant_sample.ps" ,callFile=args[8], summaryFile=args[9],posteriorFile=args[10], confidenceFile= args[11], specialSNPsFile=args[12], plot.genotype=TRUE,plot.intensity=FALSE,plot.confs=TRUE,vertical.line=TRUE)
+Ps_Visualization(output.File="Other.pdf",pidFile="Other_sample.ps" ,callFile=args[8], summaryFile=args[9],posteriorFile=args[10], confidenceFile= args[11], specialSNPsFile=args[12], plot.genotype=TRUE,plot.intensity=FALSE,plot.confs=TRUE,vertical.line=TRUE)
